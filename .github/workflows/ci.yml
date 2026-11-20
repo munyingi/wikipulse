@@ -21,8 +21,6 @@ jobs:
           distribution: temurin
           java-version: "17"
       - run: pip install -e ".[dev,local]"
-      - name: diag
-        run: python scripts/_diag.py
       - run: ruff check . && ruff format --check .
       - name: notebook builds are up to date
         run: python scripts/build_notebooks.py --check
