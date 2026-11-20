@@ -24,6 +24,8 @@ jobs:
       - run: ruff check . && ruff format --check .
       - name: notebook builds are up to date
         run: python scripts/build_notebooks.py --check
+      - name: diag
+        run: python scripts/_diag.py
       - name: tests (including Delta MERGE / replaceWhere and backfill)
         run: pytest -q -rs
 
