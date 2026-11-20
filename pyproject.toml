@@ -13,7 +13,7 @@ license = { text = "MIT" }
 dependencies = []  # Fabric Spark runtime provides pyspark and delta
 
 [project.optional-dependencies]
-local = ["pyspark==3.5.*", "delta-spark==3.2.*"]
+local = ["pyspark==3.5.*", "delta-spark>=3.3,<3.4"]
 stream = ["requests>=2.31", "azure-eventhub>=5.11"]
 deploy = ["requests>=2.31", "azure-identity>=1.17", "azure-storage-file-datalake>=12.16"]
 dev = ["pytest>=8", "ruff>=0.5", "requests>=2.31"]
