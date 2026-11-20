@@ -138,21 +138,19 @@ def join_edits(spark: SparkSession, day) -> None:
 
 
 def _write_quality(spark: SparkSession, results: list, hour: datetime, run_id: str) -> None:
+    now = datetime.now(UTC).replace(tzinfo=None)
     rows = [
         {
             **r.as_row(),
+            "observed": float(r.observed),
+            "threshold": float(r.threshold),
             "hour_utc": hour.replace(tzinfo=None),
             "run_id": run_id,
-            "checked_at": datetime.now(UTC).replace(tzinfo=None),
+            "checked_at": now,
         }
         for r in results
     ]
-    df = (
-        spark.createDataFrame(rows)
-        .withColumn("observed", F.col("observed").cast("double"))
-        .withColumn("threshold", F.col("threshold").cast("double"))
-    )
-    merge_upsert(df, T_QUALITY, ["hour_utc", "check", "table"])
+    merge_upsert(spark.createDataFrame(rows), T_QUALITY, ["hour_utc", "check", "table"])
 
 
 def _record_run(spark: SparkSession, summary: dict) -> None:
