@@ -1,0 +1,26 @@
+// Tiles for the Real-Time Dashboard (Eventhouse > New Real-Time Dashboard > add tile > paste query).
+
+// 1. Edits per minute, humans vs bots (time chart)
+EditsPerMinute
+| where minute > ago(3h)
+| summarize edits = sum(edits) by minute, editor_type = iff(is_bot, "bot", "human")
+| render timechart
+
+// 2. Most edited articles in the last hour (table)
+TopEditedPages(1h, 20)
+
+// 3. Edit spikes in the last 6 hours (anomaly table)
+EditSpikes(6h)
+| project minute, wiki, edits, score
+| order by minute desc
+
+// 4. Bot share per wiki today (bar chart)
+BotShare(24h)
+| take 15
+| render barchart
+
+// 5. Ingestion lag: seconds between the edit and its arrival (stat tile)
+RecentChanges
+| where ingestion_time() > ago(15m)
+| summarize p50 = percentile(datetime_diff('second', ingestion_time(), event_time), 50),
+            p95 = percentile(datetime_diff('second', ingestion_time(), event_time), 95)

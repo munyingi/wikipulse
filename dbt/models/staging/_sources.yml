@@ -1,0 +1,21 @@
+version: 2
+
+sources:
+  - name: gold
+    description: Gold Delta tables written by the Spark notebooks, read through the lakehouse SQL endpoint.
+    database: "{{ var('lakehouse') }}"
+    schema: gold
+    tables:
+      - name: daily_page_views
+      - name: wiki_hourly_traffic
+      - name: top_pages_daily
+      - name: trending_pages
+      - name: edits_vs_views
+      - name: editors_daily
+  - name: ops
+    database: "{{ var('lakehouse') }}"
+    schema: ops
+    tables:
+      - name: pipeline_runs
+      - name: quality_results
+      - name: hour_status

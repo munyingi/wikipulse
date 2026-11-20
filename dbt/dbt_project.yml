@@ -1,0 +1,32 @@
+name: wikipulse
+version: "1.0.0"
+config-version: 2
+profile: wikipulse
+
+model-paths: ["models"]
+macro-paths: ["macros"]
+seed-paths: ["seeds"]
+test-paths: ["tests"]
+target-path: "target"
+clean-targets: ["target", "dbt_packages"]
+
+vars:
+  lakehouse: lh_wikipulse   # gold tables are read through the lakehouse SQL endpoint (same workspace)
+
+on-run-start:
+  - "{{ drop_security_policies() }}"   # policies are schema-bound, so drop them before tables are rebuilt
+on-run-end:
+  - "{{ create_security_policies() }}"
+
+models:
+  wikipulse:
+    +materialized: table
+    staging:
+      +schema: staging
+      +materialized: view
+    marts:
+      +schema: marts
+
+seeds:
+  wikipulse:
+    +schema: security

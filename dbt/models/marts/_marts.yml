@@ -1,0 +1,46 @@
+version: 2
+
+models:
+  - name: dim_wiki
+    columns:
+      - name: wiki
+        data_tests: [unique, not_null]
+  - name: fct_wiki_daily_traffic
+    description: Daily views per wiki, desktop vs mobile. Row-level security by language.
+    data_tests:
+      - unique_combination_of_columns:
+          arguments:
+            columns: [date_utc, wiki]
+    columns:
+      - name: wiki
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_wiki')
+                field: wiki
+      - name: views
+        data_tests: [not_null, non_negative]
+  - name: fct_top_articles_daily
+    description: Top 100 articles per wiki and day, with spike score and edits. Row-level security by language.
+    data_tests:
+      - unique_combination_of_columns:
+          arguments:
+            columns: [date_utc, wiki, page_rank]
+    columns:
+      - name: page_rank
+        data_tests:
+          - accepted_range:
+              arguments:
+                min_value: 1
+                max_value: 100
+  - name: fct_trending_articles
+  - name: fct_attention_vs_work
+  - name: fct_editor_activity_daily
+    description: Edits per editor and day. `editor` is masked (partial) for readers without UNMASK.
+    columns:
+      - name: edits
+        data_tests: [non_negative]
+  - name: mart_pipeline_health
+    columns:
+      - name: run_date
+        data_tests: [unique, not_null]

@@ -1,0 +1,59 @@
+// Eventhouse schema for the live Wikimedia recent changes feed. Deployed by Terraform (fabric_kql_database).
+
+.create-merge table RecentChanges (
+    event_id: string, event_time: datetime, wiki: string, server_name: string, change_type: string,
+    namespace: int, title: string, editor: string, is_bot: bool, is_minor: bool,
+    length_old: long, length_new: long, bytes_changed: long, revision_old: long, revision_new: long)
+
+// Keep 30 days queryable, the last 7 days in hot cache.
+.alter table RecentChanges policy retention softdelete = 30d recoverability = disabled
+
+.alter table RecentChanges policy caching hot = 7d
+
+// Eventstream delivers at least once. This view keeps one row per event_id, so every query is exactly-once.
+.create-or-alter materialized-view RecentChangesDedup on table RecentChanges
+{
+    RecentChanges
+    | summarize take_any(*) by event_id
+}
+
+// Pre-aggregated per minute for the real-time dashboard.
+.create-or-alter materialized-view EditsPerMinute on table RecentChanges
+{
+    RecentChanges
+    | where change_type in ("edit", "new")
+    | summarize edits = count(), editors = dcount(editor), bytes_changed = sum(abs(bytes_changed))
+        by wiki, is_bot, minute = bin(event_time, 1m)
+}
+
+.create-or-alter function with (docstring = "Most edited articles in the lookback window", folder = "dashboard")
+TopEditedPages(lookback: timespan = 1h, top: int = 20)
+{
+    materialized_view('RecentChangesDedup')
+    | where event_time > ago(lookback) and namespace == 0 and change_type in ("edit", "new")
+    | summarize edits = count(), editors = dcount(editor), human_edits = countif(not(is_bot)) by wiki, title
+    | top top by edits
+}
+
+.create-or-alter function with (docstring = "Minutes with unusual edit volume per wiki", folder = "dashboard")
+EditSpikes(lookback: timespan = 6h)
+{
+    materialized_view('EditsPerMinute')
+    | where minute > ago(lookback)
+    | summarize edits = sum(edits) by wiki, minute
+    | make-series edits = sum(edits) default = 0 on minute step 1m by wiki
+    | extend (anomaly, score, baseline) = series_decompose_anomalies(edits, 2.5)
+    | mv-expand minute to typeof(datetime), edits to typeof(long), anomaly to typeof(int), score to typeof(double)
+    | where anomaly == 1
+}
+
+.create-or-alter function with (docstring = "Share of edits made by bots per wiki", folder = "dashboard")
+BotShare(lookback: timespan = 24h)
+{
+    materialized_view('EditsPerMinute')
+    | where minute > ago(lookback)
+    | summarize total = sum(edits), bot = sumif(edits, is_bot) by wiki
+    | extend bot_share = round(todouble(bot) / total, 3)
+    | where total > 100
+    | order by total desc
+}

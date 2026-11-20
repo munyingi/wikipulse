@@ -1,0 +1,23 @@
+{
+  "properties": {
+    "type": "Airflow",
+    "typeProperties": {
+      "airflowProperties": {
+        "airflowVersion": "{{ .AirflowVersion }}",
+        "pythonVersion": "3.12",
+        "environmentVariables": {{ .Environment }},
+        "airflowConfigurationOverrides": {},
+        "airflowRequirements": ["apache-airflow-microsoft-fabric-plugin", "requests", "dbt-fabric"],
+        "enableAADIntegration": true,
+        "enableTriggerers": false
+      },
+      "computeProperties": {
+        "computePool": "StarterPool",
+        "computeSize": "Small",
+        "extraNodes": 0,
+        "enableAvailabilityZones": false,
+        "enableAutoscale": false
+      }
+    }
+  }
+}

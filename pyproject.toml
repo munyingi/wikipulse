@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wikipulse"
+version = "1.0.0"
+description = "Real-time and batch analytics of Wikipedia activity on Microsoft Fabric"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [{ name = "Samwel Munyingi", email = "samwelmunyingi@gmail.com" }]
+license = { text = "MIT" }
+dependencies = []  # Fabric Spark runtime provides pyspark and delta
+
+[project.optional-dependencies]
+local = ["pyspark==3.5.*", "delta-spark==3.2.*"]
+stream = ["requests>=2.31", "azure-eventhub>=5.11"]
+deploy = ["requests>=2.31", "azure-identity>=1.17", "azure-storage-file-datalake>=12.16"]
+dev = ["pytest>=8", "ruff>=0.5", "requests>=2.31"]
+
+[project.scripts]
+wikipulse-local = "wikipulse.local:main"
+wikipulse-stream = "wikipulse.recentchanges:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+extend-exclude = ["notebooks"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = ["B905"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["delta: needs delta-spark jars (runs in CI)"]

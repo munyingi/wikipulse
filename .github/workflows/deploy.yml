@@ -1,0 +1,68 @@
+name: deploy
+
+# Manual deployment to dev or prod with GitHub OIDC (no client secret stored in GitHub).
+# Needs repository secrets FABRIC_TENANT_ID, FABRIC_CLIENT_ID, FABRIC_CAPACITY_ID and the Terraform state
+# storage secrets TFSTATE_RESOURCE_GROUP, TFSTATE_STORAGE_ACCOUNT. See docs/setup.md.
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment
+        type: choice
+        options: [dev, prod]
+        default: dev
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}   # protect "prod" with required reviewers in repo settings
+    env:
+      FABRIC_TENANT_ID: ${{ secrets.FABRIC_TENANT_ID }}
+      FABRIC_CLIENT_ID: ${{ secrets.FABRIC_CLIENT_ID }}
+      FABRIC_USE_OIDC: "true"
+      ARM_TENANT_ID: ${{ secrets.FABRIC_TENANT_ID }}
+      ARM_CLIENT_ID: ${{ secrets.FABRIC_CLIENT_ID }}
+      ARM_USE_OIDC: "true"
+      TF_VAR_capacity_id: ${{ secrets.FABRIC_CAPACITY_ID }}
+      TF_VAR_alert_webhook_url: ${{ secrets.ALERT_WEBHOOK_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - uses: azure/login@v2
+        with:
+          tenant-id: ${{ secrets.FABRIC_TENANT_ID }}
+          client-id: ${{ secrets.FABRIC_CLIENT_ID }}
+          allow-no-subscriptions: true
+      - name: remote state
+        working-directory: terraform
+        run: |
+          cat > backend.tf <<TF
+          terraform {
+            backend "azurerm" {
+              resource_group_name  = "${{ secrets.TFSTATE_RESOURCE_GROUP }}"
+              storage_account_name = "${{ secrets.TFSTATE_STORAGE_ACCOUNT }}"
+              container_name       = "tfstate"
+              key                  = "wikipulse-${{ inputs.environment }}.tfstate"
+              use_azuread_auth     = true
+            }
+          }
+          TF
+      - name: terraform apply
+        working-directory: terraform
+        run: |
+          terraform init -input=false
+          terraform apply -input=false -auto-approve -var-file=envs/${{ inputs.environment }}.tfvars
+          terraform output -json > ../tf-outputs.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -e ".[deploy]"
+      - name: upload package and DAGs
+        run: |
+          WS=$(python -c "import json; print(json.load(open('tf-outputs.json'))['workspace_id']['value'])")
+          LH=$(python -c "import json; print(json.load(open('tf-outputs.json'))['lakehouse_id']['value'])")
+          python scripts/deploy.py --env ${{ inputs.environment }} --workspace-id "$WS" --lakehouse-id "$LH"

@@ -1,0 +1,11 @@
+version: 2
+seeds:
+  - name: analyst_language_access
+    description: Who may see which languages. Replace the example UPNs with real users of your tenant.
+    config:
+      column_types:
+        analyst_upn: varchar(256)
+        language: varchar(50)
+    columns:
+      - name: analyst_upn
+        data_tests: [not_null]

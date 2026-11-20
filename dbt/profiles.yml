@@ -1,0 +1,25 @@
+# Host = warehouse SQL connection string (terraform output warehouse_connection_string).
+wikipulse:
+  target: dev
+  outputs:
+    dev:   # your own account: az login
+      type: fabric
+      driver: ODBC Driver 18 for SQL Server
+      server: "{{ env_var('WIKIPULSE_WAREHOUSE_HOST', 'not-set.datawarehouse.fabric.microsoft.com') }}"
+      port: 1433
+      database: wh_wikipulse
+      schema: dbo
+      authentication: CLI
+      threads: 4
+    prod:  # Airflow: Entra ID app registration
+      type: fabric
+      driver: ODBC Driver 18 for SQL Server
+      server: "{{ env_var('WIKIPULSE_WAREHOUSE_HOST', 'not-set.datawarehouse.fabric.microsoft.com') }}"
+      port: 1433
+      database: wh_wikipulse
+      schema: dbo
+      authentication: ServicePrincipal
+      tenant_id: "{{ env_var('WIKIPULSE_TENANT_ID', '') }}"
+      client_id: "{{ env_var('WIKIPULSE_CLIENT_ID', '') }}"
+      client_secret: "{{ env_var('WIKIPULSE_CLIENT_SECRET', '') }}"
+      threads: 4
