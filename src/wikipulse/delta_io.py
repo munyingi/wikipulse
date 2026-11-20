@@ -23,7 +23,11 @@ def replace_partition(df: DataFrame, table: str, predicate: str, partition_by: l
             writer = writer.partitionBy(*partition_by)
         writer.saveAsTable(table)
         return
-    df.write.format("delta").mode("overwrite").option("replaceWhere", predicate).saveAsTable(table)
+    # DataFrameWriterV2 "overwrite by condition" is Delta's replaceWhere through the catalog API; it works for
+    # tables addressed by name both in open-source Spark and in Fabric.
+    from pyspark.sql import functions as F
+
+    df.writeTo(table).overwrite(F.expr(predicate))
 
 
 def merge_upsert(df: DataFrame, table: str, keys: list[str], partition_by: list[str] | None = None) -> None:

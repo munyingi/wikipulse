@@ -104,6 +104,7 @@ resource "fabric_apache_airflow_job" "orchestrator" {
   display_name = "af_wikipulse"
   description  = "Hourly page views, daily edits and maintenance, freshness checks"
   workspace_id = fabric_workspace.this.id
+  format       = "Default"
   definition = {
     "apacheairflowjob-content.json" = {
       source = "${path.module}/templates/apacheairflowjob-content.json.tmpl"
